@@ -1,0 +1,82 @@
+デスクトップアプリケーションとして実装するには、GUI (グラフィカルユーザーインターフェース) フレームワークを使用して、コードをラップする必要があります。Pythonでよく使用されるGUIフレームワークには、Tkinter、PyQt、Kivyなどがあります。ここでは、一般的なステップとして、PyInstallerを使用してPythonスクリプトを実行可能ファイルに変換する方法を紹介します。また、GUIの例としてTkinterを使った基本的な手順も説明します。
+
+### ステップ1: GUIの作成
+
+まず、PythonのスクリプトにGUIを追加する必要があります。TkinterはPythonに組み込まれている標準GUIライブラリで、比較的簡単に使い始めることができます。
+
+以下は、Tkinterを使用して簡単なGUIを作成し、ユーザーが画像ファイルを選択してOCR処理を実行し、結果をExcelファイルに保存するための基本的なコード例です。
+
+```python
+import tkinter as tk
+from tkinter import filedialog
+from google.cloud import vision
+from google.oauth2 import service_account
+import xlsxwriter
+import io
+
+def perform_ocr():
+    # ファイル選択ダイアログを開く
+    filepath = filedialog.askopenfilename()
+    if not filepath:
+        return
+    
+    # OCR処理を実行
+    # 身元証明書のjsonを読み込み
+    credentials = service_account.Credentials.from_service_account_file('data/test.json')
+    client = vision.ImageAnnotatorClient(credentials=credentials)
+
+    with io.open(filepath, 'rb') as image_file:
+        content = image_file.read()
+    image = vision.Image(content=content)
+    response = client.document_text_detection(image=image, image_context={'language_hints': ['ja']})
+
+    # Excelファイルに書き込み
+    workbook = xlsxwriter.Workbook("result.xlsx")
+    worksheet = workbook.add_worksheet("OCR Results")
+
+    row = 0
+    for page in response.full_text_annotation.pages:
+        for block in page.blocks:
+            for paragraph in block.paragraphs:
+                col = 0
+                for word in paragraph.words:
+                    word_text = ''.join([symbol.text for symbol in word.symbols])
+                    worksheet.write(row, col, word_text)
+                    col += 1
+                row += 1
+    workbook.close()
+
+    # 処理完了メッセージ
+    tk.messagebox.showinfo("完了", "OCR処理が完了し、結果がExcelファイルに保存されました。")
+
+# GUIの初期化
+root = tk.Tk()
+root.title("OCR to Excel Converter")
+
+# ボタンの追加
+button = tk.Button(root, text="画像ファイルを選択してOCR実行", command=perform_ocr)
+button.pack(pady=20)
+
+# GUIの実行
+root.mainloop()
+```
+ーーーーーーーーーーーーーーーーーーーーーーーーー
+### ステップ2: 実行可能ファイルの作成
+
+開発したデスクトップアプリケーションを他のコンピュータで簡単に実行できるように、Pythonスクリプトを実行可能ファイルに変換します。これには、PyInstallerなどのツールを使用できます。
+
+1. コマンドラインまたはターミナルを開きます。
+2. PyInstallerをインストールしていない場合は、`pip install pyinstaller`を実行してインストールします。
+3. アプリケーションのディレクトリに移動し、以下のコマンドを実行して実行可能ファイルを生成します。
+
+    ```
+    pyinstaller --onefile --windowed your_script_name.py
+    ```
+
+    `your_script_name.py`は、あなたのPythonスクリプトのファイル名
+
+に置き換えてください。
+
+4. `dist`フォルダに生成された実行可能ファイルを見つけることができます。このファイルは他のコンピュータに配布して実行することができます。
+
+これらのステップにより、Pythonスクリプトをデスクトップアプリケーションに変換し、実行可能ファイルを生成することができます。
